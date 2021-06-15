@@ -124,6 +124,7 @@ private:
 	char* envExpand(const char *str);
 	void getViRef(BSTR vi_name, bool reentrant, LabVIEW::VirtualInstrumentPtr &vi);
 	void createViRef(BSTR vi_name, bool reentrant, LabVIEW::VirtualInstrumentPtr &vi);
+	void getLabviewValue(BSTR vi_name, BSTR control_name, VARIANT* value, UINT order);
 	void getLabviewValue(BSTR vi_name, BSTR control_name, VARIANT* value);
 	void setLabviewValue(BSTR vi_name, BSTR control_name, const VARIANT& value);
 	void setLabviewValueExt(BSTR vi_name, BSTR control_name, const VARIANT& value, VARIANT* results);

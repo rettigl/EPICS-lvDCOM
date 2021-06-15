@@ -293,6 +293,10 @@ lvDCOMDriver::lvDCOMDriver(lvDCOMInterface* dcomint, const char *portName)
 		{
 			createParam(it->first.c_str(), asynParamFloat64, &i);
 		}
+		else if (it->second == "Cluster:float64")
+		{
+			createParam(it->first.c_str(), asynParamFloat64, &i);
+		}
 		else if (it->second == "int32" || it->second == "enum" || it->second == "ring" || it->second == "boolean")
 		{
 			createParam(it->first.c_str(), asynParamInt32, &i);

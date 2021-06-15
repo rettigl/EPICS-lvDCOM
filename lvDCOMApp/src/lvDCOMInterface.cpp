@@ -1054,16 +1054,35 @@ void lvDCOMInterface::getLabviewValue(const char* param, T* value)
 		throw std::runtime_error("getLabviewValue: param is NULL");
 	}
 	CComVariant v;
-	char vi_name_xpath[MAX_PATH_LEN], control_name_xpath[MAX_PATH_LEN];
+	char vi_name_xpath[MAX_PATH_LEN], control_name_xpath[MAX_PATH_LEN], type_xpath[MAX_PATH_LEN];
 	_snprintf(vi_name_xpath, sizeof(vi_name_xpath), "/lvinput/section[@name='%s']/vi[param[@name='%s']]/@path", m_configSection.c_str(), param);
 	_snprintf(control_name_xpath, sizeof(control_name_xpath), "/lvinput/section[@name='%s']/vi/param[@name='%s']/read/@target", m_configSection.c_str(), param);
+	_snprintf(type_xpath, sizeof(type_xpath), "/lvinput/section[@name='%s']/vi[param[@name='%s']]/param/@type", m_configSection.c_str(), param);
 	CComBSTR vi_name(doPath(vi_name_xpath).c_str());
 	CComBSTR control_name(doXPATH(control_name_xpath).c_str());
-	if (vi_name.Length() == 0 || control_name.Length() == 0)
+	CComBSTR type(doXPATH(type_xpath).c_str());
+	printf("vi_name=%s\r\n", doPath(vi_name_xpath).c_str());
+	printf("control_name=%s\r\n", doXPATH(control_name_xpath).c_str());
+	printf("type=%s\r\n", doXPATH(type_xpath).c_str());
+	if (vi_name.Length() == 0 || control_name.Length() == 0 || type.Length() == 0)
 	{
 		throw std::runtime_error("getLabviewValue: vi or control is NULL");
 	}
-	getLabviewValue(vi_name, control_name, &v);
+	if (wcsncmp(type, CComBSTR("Cluster:"), 8)==0)
+	{
+		// Cluster variant
+		printf("I am a cluster\n\r");
+		char control_order_xpath[MAX_PATH_LEN];
+		_snprintf(control_order_xpath, sizeof(control_order_xpath), "/lvinput/section[@name='%s']/vi/param[@name='%s']/read/@order", m_configSection.c_str(), param);
+		CComBSTR order(doXPATH(control_order_xpath).c_str());
+		printf("order=%s\r\n", doXPATH(control_order_xpath).c_str());
+		UINT orderN = _wtoi(order);
+		getLabviewValue(vi_name, control_name, &v, orderN);
+	}
+	else
+	{
+		getLabviewValue(vi_name, control_name, &v);
+	}
 	if ( v.ChangeType(CVarTypeInfo<T>::VT) == S_OK )
 	{
 		*value = v.*(CVarTypeInfo<T>::pmField);	
@@ -1071,6 +1090,33 @@ void lvDCOMInterface::getLabviewValue(const char* param, T* value)
 	else
 	{
 		throw std::runtime_error("getLabviewValue failed (ChangeType)");
+	}
+	printf("value=%g\r\n", (double) *value);
+}
+
+// version for cluster values
+void lvDCOMInterface::getLabviewValue(BSTR vi_name, BSTR control_name, VARIANT* value, UINT order)
+{
+	HRESULT hr = S_OK;
+	LabVIEW::VirtualInstrumentPtr vi;
+	getViRef(vi_name, false, vi);
+	CComVariant v = vi->GetControlValue(control_name).Detach();
+	vi.Detach();
+	if ( v.vt != (VT_ARRAY | VT_VARIANT))
+	{
+		throw std::runtime_error("getLabviewValue: Control is not a valid Cluster.");
+	}
+	CComSafeArray<VARIANT> sa;
+	sa.Attach(v.parray);
+	printf("number of elements: %d\r\n", sa.GetCount());
+	if ( order > sa.GetCount())
+	{
+		throw std::runtime_error("getLabviewValue: Element not found in cluster.");
+	}
+	*value = sa.GetAt(order);
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("getLabviewValue failed");
 	}
 }
 
